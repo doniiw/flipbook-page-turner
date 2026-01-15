@@ -47,6 +47,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        flipbook: {
+          bg: "hsl(var(--flipbook-bg))",
+          toolbar: "hsl(var(--flipbook-toolbar))",
+          gold: "hsl(var(--flipbook-gold))",
+          "gold-hover": "hsl(var(--flipbook-gold-hover))",
+          page: "hsl(var(--flipbook-page))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -57,6 +64,10 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      fontFamily: {
+        heading: ['Playfair Display', 'serif'],
+        body: ['Inter', 'sans-serif'],
       },
       borderRadius: {
         lg: "var(--radius)",
