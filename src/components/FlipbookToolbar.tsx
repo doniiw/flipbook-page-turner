@@ -1,5 +1,6 @@
 import { 
-  Search, 
+  ZoomIn,
+  ZoomOut,
   Grid3X3, 
   List, 
   ChevronsLeft, 
@@ -7,8 +8,13 @@ import {
   ChevronRight, 
   ChevronsRight,
   Bookmark,
-  Share2
+  Share2,
+  Maximize,
+  Minimize,
+  Volume2,
+  VolumeX
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface FlipbookToolbarProps {
   currentPage: number;
@@ -18,6 +24,15 @@ interface FlipbookToolbarProps {
   onLastPage: () => void;
   onPrevPage: () => void;
   onNextPage: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onToggleThumbnails: () => void;
+  onToggleFullscreen: () => void;
+  onToggleSound: () => void;
+  zoom: number;
+  isThumbnailOpen: boolean;
+  isFullscreen: boolean;
+  isSoundEnabled: boolean;
   title?: string;
 }
 
@@ -29,8 +44,24 @@ const FlipbookToolbar = ({
   onLastPage,
   onPrevPage,
   onNextPage,
+  onZoomIn,
+  onZoomOut,
+  onToggleThumbnails,
+  onToggleFullscreen,
+  onToggleSound,
+  zoom,
+  isThumbnailOpen,
+  isFullscreen,
+  isSoundEnabled,
   title = "Digital Magazine"
 }: FlipbookToolbarProps) => {
+  // Calculate display page range (for double-page spread)
+  const displayPageStart = currentPage;
+  const displayPageEnd = Math.min(currentPage + 1, totalPages);
+  const displayText = currentPage === 1 
+    ? `1/${totalPages}` 
+    : `${displayPageStart}-${displayPageEnd}/${totalPages}`;
+
   return (
     <header className="flipbook-toolbar relative z-20">
       {/* Logo / Title */}
@@ -42,11 +73,34 @@ const FlipbookToolbar = ({
 
       {/* Center Controls */}
       <nav className="flex items-center gap-1">
-        <button className="flipbook-btn" title="Zoom">
-          <Search className="w-5 h-5" />
+        {/* Zoom Controls */}
+        <button 
+          className="flipbook-btn" 
+          onClick={onZoomOut}
+          title="Zoom Out"
+          disabled={zoom <= 0.5}
+        >
+          <ZoomOut className="w-5 h-5" />
         </button>
         
-        <button className="flipbook-btn" title="Grid View">
+        <span className="text-sm text-muted-foreground font-medium min-w-[50px] text-center">
+          {Math.round(zoom * 100)}%
+        </span>
+        
+        <button 
+          className="flipbook-btn" 
+          onClick={onZoomIn}
+          title="Zoom In"
+          disabled={zoom >= 2}
+        >
+          <ZoomIn className="w-5 h-5" />
+        </button>
+        
+        <button 
+          className={cn("flipbook-btn", isThumbnailOpen && "active")} 
+          onClick={onToggleThumbnails}
+          title="Thumbnails"
+        >
           <Grid3X3 className="w-5 h-5" />
         </button>
         
@@ -76,7 +130,7 @@ const FlipbookToolbar = ({
 
         <input
           type="text"
-          value={`${currentPage}/${totalPages}`}
+          value={displayText}
           onChange={(e) => {
             const match = e.target.value.match(/^(\d+)/);
             if (match) {
@@ -115,6 +169,24 @@ const FlipbookToolbar = ({
         
         <button className="flipbook-btn" title="Share">
           <Share2 className="w-5 h-5" />
+        </button>
+
+        <div className="w-px h-6 bg-border mx-2" />
+
+        <button 
+          className={cn("flipbook-btn", isSoundEnabled && "active")}
+          onClick={onToggleSound}
+          title={isSoundEnabled ? "Mute Sound" : "Enable Sound"}
+        >
+          {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+        </button>
+
+        <button 
+          className="flipbook-btn" 
+          onClick={onToggleFullscreen}
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
         </button>
       </nav>
 

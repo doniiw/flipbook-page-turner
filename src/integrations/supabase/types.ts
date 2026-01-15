@@ -14,7 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      flipbook_pages: {
+        Row: {
+          created_at: string
+          flipbook_id: string
+          id: string
+          image_url: string
+          page_number: number
+          thumbnail_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          flipbook_id: string
+          id?: string
+          image_url: string
+          page_number: number
+          thumbnail_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          flipbook_id?: string
+          id?: string
+          image_url?: string
+          page_number?: number
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flipbook_pages_flipbook_id_fkey"
+            columns: ["flipbook_id"]
+            isOneToOne: false
+            referencedRelation: "flipbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flipbooks: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+          title: string
+          total_pages: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+          title: string
+          total_pages?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+          title?: string
+          total_pages?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

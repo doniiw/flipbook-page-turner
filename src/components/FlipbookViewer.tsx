@@ -1,8 +1,11 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import HTMLFlipBook from "react-pageflip";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import FlipbookToolbar from "./FlipbookToolbar";
 import FlipbookPage from "./FlipbookPage";
+import ThumbnailSidebar from "./ThumbnailSidebar";
+import usePageTurnSound from "@/hooks/usePageTurnSound";
+import useFullscreen from "@/hooks/useFullscreen";
 import flipbookBg from "@/assets/flipbook-background.jpg";
 
 // Sample pages for demo - in production these would come from PDF
@@ -123,6 +126,37 @@ const samplePages = [
       </div>
     ),
   },
+  {
+    id: 7,
+    type: "content",
+    content: (
+      <div className="h-full bg-gradient-to-br from-blue-50 to-cyan-50 p-8 md:p-12">
+        <p className="text-sm tracking-[0.2em] text-blue-600 mb-3">TRAVEL</p>
+        <h2 className="font-heading text-4xl text-slate-800 mb-6">Destinations</h2>
+        <div className="grid grid-cols-2 gap-4">
+          {["Paris", "Tokyo", "New York", "Bali"].map((city, idx) => (
+            <div key={idx} className="bg-white/80 backdrop-blur p-4 rounded-lg text-center shadow-sm">
+              <span className="text-2xl mb-2 block">🌍</span>
+              <span className="font-medium text-slate-700">{city}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 8,
+    type: "back-cover",
+    content: (
+      <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-slate-800 to-slate-900 p-8">
+        <div className="text-center text-white">
+          <h2 className="font-heading text-4xl mb-4">Thank You</h2>
+          <p className="text-slate-400 mb-6">For reading our digital magazine</p>
+          <div className="w-20 h-0.5 bg-amber-500 mx-auto" />
+        </div>
+      </div>
+    ),
+  },
 ];
 
 interface FlipbookViewerProps {
@@ -131,12 +165,21 @@ interface FlipbookViewerProps {
 
 const FlipbookViewer = ({ title = "Digital Magazine" }: FlipbookViewerProps) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const [isThumbnailOpen, setIsThumbnailOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  
   const flipBookRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const totalPages = samplePages.length;
+
+  const { playPageTurn } = usePageTurnSound(isSoundEnabled);
+  const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
 
   const onFlip = useCallback((e: { data: number }) => {
     setCurrentPage(e.data + 1);
-  }, []);
+    playPageTurn();
+  }, [playPageTurn]);
 
   const goToPage = useCallback((page: number) => {
     if (flipBookRef.current) {
@@ -168,8 +211,40 @@ const FlipbookViewer = ({ title = "Digital Magazine" }: FlipbookViewerProps) => 
     }
   }, []);
 
+  const handleZoomIn = useCallback(() => {
+    setZoom((prev) => Math.min(prev + 0.25, 2));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        goToPrevPage();
+      } else if (e.key === "ArrowRight") {
+        goToNextPage();
+      } else if (e.key === "Home") {
+        goToFirstPage();
+      } else if (e.key === "End") {
+        goToLastPage();
+      } else if (e.key === "+" || e.key === "=") {
+        handleZoomIn();
+      } else if (e.key === "-") {
+        handleZoomOut();
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goToPrevPage, goToNextPage, goToFirstPage, goToLastPage, handleZoomIn, handleZoomOut, toggleFullscreen]);
+
   return (
-    <div className="flipbook-container">
+    <div ref={containerRef} className="flipbook-container">
       {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-fixed"
@@ -189,11 +264,20 @@ const FlipbookViewer = ({ title = "Digital Magazine" }: FlipbookViewerProps) => 
           onLastPage={goToLastPage}
           onPrevPage={goToPrevPage}
           onNextPage={goToNextPage}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onToggleThumbnails={() => setIsThumbnailOpen(!isThumbnailOpen)}
+          onToggleFullscreen={toggleFullscreen}
+          onToggleSound={() => setIsSoundEnabled(!isSoundEnabled)}
+          zoom={zoom}
+          isThumbnailOpen={isThumbnailOpen}
+          isFullscreen={isFullscreen}
+          isSoundEnabled={isSoundEnabled}
           title={title}
         />
 
-        {/* Flipbook Container */}
-        <div className="flex-1 flex items-center justify-center relative px-16 py-8">
+        {/* Flipbook Container with Zoom */}
+        <div className="flex-1 flex items-center justify-center relative px-16 py-8 overflow-hidden">
           {/* Left Navigation Arrow */}
           <button
             onClick={goToPrevPage}
@@ -203,41 +287,46 @@ const FlipbookViewer = ({ title = "Digital Magazine" }: FlipbookViewerProps) => 
             <ChevronLeft className="w-12 h-12" />
           </button>
 
-          {/* Flipbook */}
-          <div className="flipbook-wrapper">
-            <HTMLFlipBook
-              ref={flipBookRef}
-              width={400}
-              height={560}
-              size="stretch"
-              minWidth={300}
-              maxWidth={600}
-              minHeight={420}
-              maxHeight={840}
-              showCover={true}
-              mobileScrollSupport={true}
-              onFlip={onFlip}
-              className="shadow-2xl"
-              style={{}}
-              startPage={0}
-              drawShadow={true}
-              flippingTime={800}
-              usePortrait={true}
-              startZIndex={0}
-              autoSize={true}
-              maxShadowOpacity={0.5}
-              showPageCorners={true}
-              disableFlipByClick={false}
-              swipeDistance={30}
-              clickEventForward={true}
-              useMouseEvents={true}
-            >
-              {samplePages.map((page) => (
-                <FlipbookPage key={page.id} pageNumber={page.id}>
-                  {page.content}
-                </FlipbookPage>
-              ))}
-            </HTMLFlipBook>
+          {/* Flipbook with Zoom */}
+          <div 
+            className="zoom-container"
+            style={{ transform: `scale(${zoom})` }}
+          >
+            <div className="flipbook-wrapper">
+              <HTMLFlipBook
+                ref={flipBookRef}
+                width={450}
+                height={600}
+                size="stretch"
+                minWidth={350}
+                maxWidth={700}
+                minHeight={480}
+                maxHeight={900}
+                showCover={true}
+                mobileScrollSupport={true}
+                onFlip={onFlip}
+                className="shadow-2xl"
+                style={{}}
+                startPage={0}
+                drawShadow={true}
+                flippingTime={600}
+                usePortrait={false}
+                startZIndex={0}
+                autoSize={true}
+                maxShadowOpacity={0.5}
+                showPageCorners={true}
+                disableFlipByClick={false}
+                swipeDistance={30}
+                clickEventForward={true}
+                useMouseEvents={true}
+              >
+                {samplePages.map((page) => (
+                  <FlipbookPage key={page.id} pageNumber={page.id}>
+                    {page.content}
+                  </FlipbookPage>
+                ))}
+              </HTMLFlipBook>
+            </div>
           </div>
 
           {/* Right Navigation Arrow */}
@@ -266,6 +355,19 @@ const FlipbookViewer = ({ title = "Digital Magazine" }: FlipbookViewerProps) => 
           </button>
         </div>
       </div>
+
+      {/* Thumbnail Sidebar */}
+      <ThumbnailSidebar
+        isOpen={isThumbnailOpen}
+        onClose={() => setIsThumbnailOpen(false)}
+        pages={samplePages.map((p) => ({ id: p.id, thumbnail: p.content }))}
+        currentPage={currentPage}
+        onPageSelect={(page) => {
+          goToPage(page);
+          setIsThumbnailOpen(false);
+        }}
+        totalPages={totalPages}
+      />
     </div>
   );
 };
